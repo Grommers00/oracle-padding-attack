@@ -3,6 +3,21 @@ import select
 import sys 
 from Crypto.Cipher import AES
 from Crypto.Util import Counter
+from Crypto.Util.Padding import pad
+from Crypto.Util.py3compat import bchr, bord
+
+
+
+def btnPad(data_to_pad, block_size, style):
+	padding_len = block_size-len(data_to_pad)%block_size
+	padding = bytearray()
+	if style == 'btn710':
+		for x in range(padding_len):
+			padding += bchr(x)
+	else:
+		raise ValueError("Unknown padding style")
+	return data_to_pad + padding
+
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
 if len(sys.argv) != 3: 
@@ -14,8 +29,9 @@ server.connect((IP_address, Port))
 nonce = b'abcd'
 ctr = Counter.new(64, prefix=nonce, suffix=b'ABCD', little_endian=True, initial_value=10)
 key = b'1234567891234567'
+# key = b'abcdefghijklmnop'
 cipher = AES.new(key, AES.MODE_CTR, counter=ctr)
-
+# 0, 1, 2, 3, 4, (n-1)
 while True: 
 
 	# maintains a list of possible input streams 
@@ -39,9 +55,11 @@ while True:
 		else: 
 			message = sys.stdin.readline() 
 			plaintext = bytes(message, 'utf-8')
-			ciphertext = cipher.encrypt(plaintext)
+			# value padding, 0- n-1
+			ciphertext = cipher.encrypt(btnPad(plaintext,16,'btn710'))
 			server.sendall(ciphertext) 
 			sys.stdout.write("<You>") 
 			sys.stdout.write(message) 
 			sys.stdout.flush() 
 server.close() 
+

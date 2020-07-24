@@ -4,8 +4,29 @@ import select
 import sys
 from Crypto.Cipher import AES
 from Crypto.Util import Counter
+from Crypto.Util.Padding import pad, unpad
+from Crypto.Util.py3compat import bchr, bord
 from threading import *
 import _thread
+
+
+def btnUnpad(padded_data, block_size, style):
+    pdata_len = len(padded_data)
+    if pdata_len % block_size:
+        raise ValueError("Input data is not padded")
+    if style in ('btn710'):
+        padding_len = bord(padded_data[-1]) + 1
+        if padding_len<1 or padding_len>min(block_size, pdata_len):
+            raise ValueError("Padding is incorrect.")
+        padding = bytearray()
+        for x in range(padding_len):
+            padding += bchr(x)
+        if padding_len>1 and padded_data[-padding_len:]!=padding:
+            raise ValueError("BTN 710 padding is incorrect.")
+    else:
+        raise ValueError("Unknown padding style")
+    return padded_data[:-padding_len]
+
 
 """The first argument AF_INET is the ad
 dress domain of the
@@ -58,13 +79,18 @@ def clientthread(conn, addr):
         try:
             ciphertext = conn.recv(2048)
             if ciphertext:
-                    message = cipher.decrypt(ciphertext)
+                try:
+                    message = btnUnpad(cipher.decrypt(ciphertext), 16, "btn710")
                     message_to_send = message
-                    print(addr[0], message_to_send)W
-                    broadcast(message_to_send, conn)
+                except ValueError as error:
+                    message_to_send = bytes(error.args, 'utf8')
+                except: 
+                    message_to_send = bytes("Other Error, Danger Danger!", 'utf-8')
+                print(addr[0], message_to_send)
+                broadcast(message_to_send, conn)
 
             else:
-                """message may have no content if the connection 
+                """message may have no content if the connection
                 is broken, in this case we remove the connection"""
                 remove(conn)
 
@@ -72,8 +98,8 @@ def clientthread(conn, addr):
             continue
 
 
-"""Using the below function, we broadcast the message to all 
-clients who's object is not the same as the one sending 
+"""Using the below function, we broadcast the message to all
+clients who's object is not the same as the one sending
 the message """
 
 
@@ -88,8 +114,8 @@ def broadcast(message, connection):
                 remove(clients)
 
 
-"""The following function simply removes the object 
-from the list that was created at the beginning of 
+"""The following function simply removes the object
+from the list that was created at the beginning of
 the program"""
 
 
