@@ -13,18 +13,18 @@ import _thread
 def btnUnpad(padded_data, block_size, style):
     pdata_len = len(padded_data)
     if pdata_len % block_size:
-        raise ValueError("Input data is not padded")
+        raise ValueError('Input data is not padded')
     if style in ('btn710'):
         padding_len = bord(padded_data[-1]) + 1
         if padding_len<1 or padding_len>min(block_size, pdata_len):
-            raise ValueError("Padding is incorrect.")
+            raise ValueError('Padding is incorrect.')
         padding = bytearray()
         for x in range(padding_len):
             padding += bchr(x)
         if padding_len>1 and padded_data[-padding_len:]!=padding:
-            raise ValueError("BTN 710 padding is incorrect.")
+            raise ValueError('BTN 710 padding is incorrect.')
     else:
-        raise ValueError("Unknown padding style")
+        raise ValueError('Unknown padding style')
     return padded_data[:-padding_len]
 
 
@@ -80,14 +80,15 @@ def clientthread(conn, addr):
             ciphertext = conn.recv(2048)
             if ciphertext:
                 try:
-                    message = btnUnpad(cipher.decrypt(ciphertext), 16, "btn710")
-                    message_to_send = message
+                    message = btnUnpad(cipher.decrypt(ciphertext), 12, "btn710")
+                    message_to_send = message.decode('utf-8')
                 except ValueError as error:
-                    message_to_send = bytes(error.args, 'utf8')
+                    message_to_send = ' '.join(error.args)
                 except: 
-                    message_to_send = bytes("Other Error, Danger Danger!", 'utf-8')
-                print(addr[0], message_to_send)
-                broadcast(message_to_send, conn)
+                    message_to_send = "Other Error, Danger Danger!"                    
+                finally:
+                    print(addr[0], message_to_send)
+                    broadcast(message_to_send.encode('utf-8'), conn)
 
             else:
                 """message may have no content if the connection
@@ -105,13 +106,13 @@ the message """
 
 def broadcast(message, connection):
     for clients in list_of_clients:
-            try:
-                clients.send(message)
-            except:
-                clients.close()
-
-                # if the link is broken, we remove the client
-                remove(clients)
+        try:
+            print('Broadcasting Messages')
+            clients.send(message)
+        except:
+            clients.close()
+            # if the link is broken, we remove the client
+            remove(clients)
 
 
 """The following function simply removes the object

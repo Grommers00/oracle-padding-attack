@@ -1,6 +1,7 @@
 import socket 
 import select 
 import sys 
+import time
 from Crypto.Cipher import AES
 from Crypto.Util import Counter
 from Crypto.Util.Padding import pad
@@ -50,13 +51,15 @@ while True:
 	for socks in read_sockets: 
 		if socks == server: 
 			message = socks.recv(2048) 
-			message.decode("utf8")
+			print(message)
+			message = message.decode('utf-8')
 			print(message)
 		else: 
 			message = sys.stdin.readline() 
 			plaintext = bytes(message, 'utf-8')
 			# value padding, 0- n-1
-			ciphertext = cipher.encrypt(btnPad(plaintext,16,'btn710'))
+			ciphertext = cipher.encrypt(btnPad(plaintext,10,'btn710'))
+			#  ciphertext = cipher.encrypt(plaintext)
 			server.sendall(ciphertext) 
 			sys.stdout.write("<You>") 
 			sys.stdout.write(message) 
