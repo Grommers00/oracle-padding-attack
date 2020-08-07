@@ -64,11 +64,9 @@ server.listen(10)
 
 list_of_clients = []
 
-nonce = b'abcd'
-ctr = Counter.new(64, prefix=nonce, suffix=b'ABCD',
-                  little_endian=True, initial_value=10)
 key = b'1234567891234567'
-cipher = AES.new(key, AES.MODE_CTR, counter=ctr)
+iv = b'0123456789012345'
+cipher = AES.new(key, AES.MODE_CBC, iv=iv)
 
 
 def clientthread(conn, addr):

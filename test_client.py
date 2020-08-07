@@ -27,12 +27,9 @@ if len(sys.argv) != 3:
 IP_address = str(sys.argv[1]) 
 Port = int(sys.argv[2]) 
 server.connect((IP_address, Port)) 
-nonce = b'abcd'
-ctr = Counter.new(64, prefix=nonce, suffix=b'ABCD', little_endian=True, initial_value=10)
 key = b'1234567891234567'
-# key = b'abcdefghijklmnop'
-cipher = AES.new(key, AES.MODE_CTR, counter=ctr)
-# 0, 1, 2, 3, 4, (n-1)
+iv = b'0123456789012345'
+cipher = AES.new(key, AES.MODE_CBC, iv=iv)
 while True: 
 
 	# maintains a list of possible input streams 
@@ -57,7 +54,7 @@ while True:
 		else: 
 			message = sys.stdin.readline() 
 			plaintext = bytes(message, 'utf-8')
-			ciphertext = cipher.encrypt(btnPad(plaintext,16,'btn710'))
+			ciphertext = cipher.encrypt(btnPad(plaintext,AES.block_size,'btn710'))
 			server.sendall(ciphertext) 
 			sys.stdout.write("<You>") 
 			sys.stdout.write(message) 
