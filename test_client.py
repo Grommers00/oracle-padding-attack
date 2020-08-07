@@ -51,15 +51,13 @@ while True:
 	for socks in read_sockets: 
 		if socks == server: 
 			message = socks.recv(2048) 
-			print(message)
-			message = message.decode('utf-8')
+			msg = int.from_bytes(message, byteorder='big')
+			print(msg)
 			print(message)
 		else: 
 			message = sys.stdin.readline() 
 			plaintext = bytes(message, 'utf-8')
-			# value padding, 0- n-1
-			ciphertext = cipher.encrypt(btnPad(plaintext,10,'btn710'))
-			#  ciphertext = cipher.encrypt(plaintext)
+			ciphertext = cipher.encrypt(btnPad(plaintext,16,'btn710'))
 			server.sendall(ciphertext) 
 			sys.stdout.write("<You>") 
 			sys.stdout.write(message) 

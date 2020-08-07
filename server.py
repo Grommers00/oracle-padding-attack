@@ -1,105 +1,141 @@
+# Python program to implement server side of chat room.
 import socket
-import hashlib
-import os
-import time
-import itertools
-import threading
+import select
 import sys
-import Crypto.Cipher.AES as AES
-from Crypto.PublicKey import RSA
-from Crypto.Cipher import IDEA
+from Crypto.Cipher import AES
+from Crypto.Util import Counter
+from Crypto.Util.Padding import pad, unpad
+from Crypto.Util.py3compat import bchr, bord
+from threading import *
+import _thread
 
-#server address and port number input from admin
-host= raw_input("Server Address - > ")
-port = int(input("Port - > "))
-#boolean for checking server and port
-check = False
-done = False
 
-def animate():
-    for c in itertools.cycle(['....','.......','..........','............']):
-        if done:
-            break
-        sys.stdout.write('\rCHECKING IP ADDRESS AND NOT USED PORT '+c)
-        sys.stdout.flush()
-        time.sleep(0.1)
-    sys.stdout.write('\r -----SERVER STARTED. WAITING FOR CLIENT-----\n')
-try:
-    #setting up socket
-    server = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-    server.bind((host,port))
-    server.listen(5)
-    check = True
-except BaseException:
-    print ("-----Check Server Address or Port-----")
-    check = False
+def btnUnpad(padded_data, block_size, style):
+    pdata_len = len(padded_data)
+    if pdata_len % block_size:
+        raise ValueError
+    if style in ('btn710'):
+        padding_len = bord(padded_data[-1]) + 1
+        if padding_len<1 or padding_len>min(block_size, pdata_len):
+            raise ValueError
+        padding = bytearray()
+        for x in range(padding_len):
+            padding += bchr(x)
+        if padding_len>1 and padded_data[-padding_len:]!=padding:
+            raise ValueError
+    else:
+        raise ValueError
+    print (b'Unpadded Message: ' + padded_data[:-padding_len])
+    return 1
 
-if check is True:
-    # server Quit
-    shutdown = False
-# printing "Server Started Message"
-thread_load = threading.Thread(target=animate)
-thread_load.start()
 
-time.sleep(4)
-done = True
-#binding client and address
-client,address = server.accept()
-print ("CLIENT IS CONNECTED. CLIENT'S ADDRESS ->",address)
-print ("\n-----WAITING FOR PUBLIC KEY & PUBLIC KEY HASH-----\n")
+"""The first argument AF_INET is the ad
+dress domain of the
+socket. This is used when we have an Internet Domain with
+any two hosts The second argument is the type of socket.
+SOCK_STREAM means that data or characters are read in
+a continuous flow."""
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-#client's message(Public Key)
-getpbk = client.recv(2048)
+# checks whether sufficient arguments have been provided
+if len(sys.argv) != 3:
+    print("Correct usage: script, IP address, port number")
+    exit()
 
-#conversion of string to KEY
-server_public_key = RSA.importKey(getpbk)
+# takes the first argument from command prompt as IP address
+IP_address = str(sys.argv[1])
 
-#hashing the public key in server side for validating the hash from client
-hash_object = hashlib.sha1(getpbk)
-hex_digest = hash_object.hexdigest()
+# takes second argument from command prompt as port number
+Port = int(sys.argv[2])
 
-if getpbk != "":
-    print (getpbk)
-    client.send("YES")
-    gethash = client.recv(1024)
-    print ("\n-----HASH OF PUBLIC KEY----- \n"+gethash)
-if hex_digest == gethash:
-    # creating session key
-    key_128 = os.urandom(16)
-    #encrypt CTR MODE session key
-    en = AES.new(key_128,AES.MODE_CTR,counter = lambda:key_128)
-    encrypto = en.encrypt(key_128)
-    #hashing sha1
-    en_object = hashlib.sha1(encrypto)
-    en_digest = en_object.hexdigest()
+"""
+binds the server to an entered IP address and at the
+specified port number.
+The client must be aware of these parameters
+"""
+server.bind((IP_address, Port))
 
-    print ("\n-----SESSION KEY-----\n"+en_digest)
+"""
+listens for 100 active connections. This number can be
+increased as per convenience.
+"""
+server.listen(10)
 
-    #encrypting session key and public key
-    E = server_public_key.encrypt(encrypto,16)
-    print ("\n-----ENCRYPTED PUBLIC KEY AND SESSION KEY-----\n"+str(E))
-    print ("\n-----HANDSHAKE COMPLETE-----")
-    client.send(str(E))
+list_of_clients = []
+
+nonce = b'abcd'
+ctr = Counter.new(64, prefix=nonce, suffix=b'ABCD',
+                  little_endian=True, initial_value=10)
+key = b'1234567891234567'
+cipher = AES.new(key, AES.MODE_CTR, counter=ctr)
+
+
+def clientthread(conn, addr):
+    # sends a message to the client whose user object is conn
+
     while True:
-        #message from client
-        newmess = client.recv(1024)
-        #decoding the message from HEXADECIMAL to decrypt the ecrypted version of the message only
-        decoded = newmess.decode("hex")
-        #making en_digest(session_key) as the key
-        key = en_digest[:16]
-        print ("\nENCRYPTED MESSAGE FROM CLIENT -> "+newmess)
-        #decrypting message from the client
-        ideaDecrypt = IDEA.new(key, IDEA.MODE_CTR, counter=lambda: key)
-        dMsg = ideaDecrypt.decrypt(decoded)
-        print ("\n**New Message**  "+time.ctime(time.time()) +" > "+dMsg+"\n")
-        mess = raw_input("\nMessage To Client -> ")
-        if mess != "":
-            ideaEncrypt = IDEA.new(key, IDEA.MODE_CTR, counter=lambda : key)
-            eMsg = ideaEncrypt.encrypt(mess)
-            eMsg = eMsg.encode("hex").upper()
-            if eMsg != "":
-                print ("ENCRYPTED MESSAGE TO CLIENT-> " + eMsg)
-            client.send(eMsg)
-    client.close()
-else:
-    print ("\n-----PUBLIC KEY HASH DOES NOT MATCH-----\n")
+        try:
+            ciphertext = conn.recv(2048)
+            if ciphertext:
+                try:
+                    message_to_send = bchr(btnUnpad(cipher.decrypt(ciphertext), 16, 'btn710'))
+                except: 
+                    message_to_send = bchr(0)                    
+                finally:
+                    print(addr[0], message_to_send)
+                    broadcast(message_to_send, conn)
+            else:
+                """message may have no content if the connection
+                is broken, in this case we remove the connection"""
+                remove(conn)
+        except:
+            continue
+
+"""Using the below function, we broadcast the message to all
+clients who's object is not the same as the one sending
+the message """
+
+
+def broadcast(message, connection):
+    for clients in list_of_clients:
+        try:
+            print('Broadcasting Messages')
+            clients.send(message)
+        except:
+            clients.close()
+            # if the link is broken, we remove the client
+            remove(clients)
+
+
+"""The following function simply removes the object
+from the list that was created at the beginning of
+the program"""
+
+
+def remove(connection):
+    if connection in list_of_clients:
+        list_of_clients.remove(connection)
+
+
+while True:
+
+    """Accepts a connection request and stores two parameters, 
+    conn which is a socket object for that user, and addr 
+    which contains the IP address of the client that just 
+    connected"""
+    conn, addr = server.accept()
+
+    """Maintains a list of clients for ease of broadcasting 
+	a message to all available people in the chatroom"""
+    list_of_clients.append(conn)
+
+    # prints the address of the user that just connected
+    print(addr[0] + " connected")
+
+    # creates and individual thread for every user
+    # that connects
+    _thread.start_new_thread(clientthread, (conn, addr))
+
+conn.close()
+server.close()

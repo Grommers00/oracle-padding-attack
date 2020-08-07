@@ -1,0 +1,2 @@
+Remove Welcome Message from server
+Change Padding error messages to 0s and 1s

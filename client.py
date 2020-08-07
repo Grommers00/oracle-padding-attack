@@ -1,98 +1,64 @@
+import socket 
+import select 
+import sys 
 import time
-import socket
-import threading
-import hashlib
-import itertools
-import sys
-from Crypto import Random
-from Crypto.PublicKey import RSA
-from CryptoPlus.Cipher import IDEA
+from Crypto.Cipher import AES
+from Crypto.Util import Counter
+from Crypto.Util.Padding import pad
+from Crypto.Util.py3compat import bchr, bord
 
-#animating loading
-done = False
-def animate():
-    for c in itertools.cycle(['....','.......','..........','............']):
-        if done:
-            break
-        sys.stdout.write('\rCONFIRMING CONNECTION TO SERVER '+c)
-        sys.stdout.flush()
-        time.sleep(0.1)
 
-#public key and private key
-random_generator = Random.new().read
-key = RSA.generate(1024,random_generator)
-public = key.publickey().exportKey()
-private = key.exportKey()
 
-#hashing the public key
-hash_object = hashlib.sha1(public)
-hex_digest = hash_object.hexdigest()
+def btnPad(data_to_pad, block_size, style):
+	padding_len = block_size-len(data_to_pad)%block_size
+	padding = bytearray()
+	if style == 'btn710':
+		for x in range(padding_len):
+			padding += bchr(x)
+	else:
+		raise ValueError("Unknown padding style")
+	return data_to_pad + padding
 
-#Setting up socket
-server = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 
-#host and port input user
-host = raw_input("Server Address To Be Connected -> ")
-port = int(input("Port of The Server -> "))
-#binding the address and port
-server.connect((host, port))
-# printing "Server Started Message"
-thread_load = threading.Thread(target=animate)
-thread_load.start()
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
+if len(sys.argv) != 3: 
+	print ("Correct usage: script, IP address, port number")
+	exit() 
+IP_address = str(sys.argv[1]) 
+Port = int(sys.argv[2]) 
+server.connect((IP_address, Port)) 
+nonce = b'abcd'
+ctr = Counter.new(64, prefix=nonce, suffix=b'ABCD', little_endian=True, initial_value=10)
+key = b'1234567891234567'
+# key = b'abcdefghijklmnop'
+cipher = AES.new(key, AES.MODE_CTR, counter=ctr)
+# 0, 1, 2, 3, 4, (n-1)
+while True: 
 
-time.sleep(4)
-done = True
+	# maintains a list of possible input streams 
+	sockets_list = [sys.stdin, server] 
 
-def send(t,name,key):
-    mess = raw_input(name + " : ")
-    key = key[:16]
-    #merging the message and the name
-    whole = name+" : "+mess
-    ideaEncrypt = IDEA.new(key, IDEA.MODE_CTR, counter=lambda : key)
-    eMsg = ideaEncrypt.encrypt(whole)
-    #converting the encrypted message to HEXADECIMAL to readable
-    eMsg = eMsg.encode("hex").upper()
-    if eMsg != "":
-        print ("ENCRYPTED MESSAGE TO SERVER-> "+eMsg)
-    server.send(eMsg)
-def recv(t,key):
-    newmess = server.recv(1024)
-    print ("\nENCRYPTED MESSAGE FROM SERVER-> " + newmess)
-    key = key[:16]
-    decoded = newmess.decode("hex")
-    ideaDecrypt = IDEA.new(key, IDEA.MODE_CTR, counter=lambda: key)
-    dMsg = ideaDecrypt.decrypt(decoded)
-    print ("\n**New Message From Server**  " + time.ctime(time.time()) + " : " + dMsg + "\n")
+	""" There are two possible input situations. Either the 
+	user wants to give manual input to send to other people, 
+	or the server is sending a message to be printed on the 
+	screen. Select returns from sockets_list, the stream that 
+	is reader for input. So for example, if the server wants 
+	to send a message, then the if condition will hold true 
+	below.If the user wants to send a message, the else 
+	condition will evaluate as true"""
+	read_sockets,write_socket, error_socket = select.select(sockets_list,[],[]) 
 
-while True:
-    server.send(public)
-    confirm = server.recv(1024)
-    if confirm == "YES":
-        server.send(hex_digest)
+	for socks in read_sockets: 
+		if socks == server: 
+			message = socks.recv(2048) 
+			print(message)
+		else: 
+			message = sys.stdin.readline() 
+			plaintext = bytes(message, 'utf-8')
+			ciphertext = cipher.encrypt(btnPad(plaintext,16,'btn710'))
+			server.sendall(ciphertext) 
+			sys.stdout.write("<You>") 
+			sys.stdout.write(message) 
+			sys.stdout.flush() 
+server.close() 
 
-    #connected msg
-    msg = server.recv(1024)
-    en = eval(msg)
-    decrypt = key.decrypt(en)
-    # hashing sha1
-    en_object = hashlib.sha1(decrypt)
-    en_digest = en_object.hexdigest()
-
-    print ("\n-----ENCRYPTED PUBLIC KEY AND SESSION KEY FROM SERVER-----")
-    print (msg)
-    print ("\n-----DECRYPTED SESSION KEY-----")
-    print (en_digest)
-    print ("\n-----HANDSHAKE COMPLETE-----\n")
-    alais = raw_input("\nYour Name -> ")
-
-    while True:
-        thread_send = threading.Thread(target=send,args=("------Sending Message------",alais,en_digest))
-        thread_recv = threading.Thread(target=recv,args=("------Recieving Message------",en_digest))
-        thread_send.start()
-        thread_recv.start()
-
-        thread_send.join()
-        thread_recv.join()
-        time.sleep(0.5)
-    time.sleep(60)
-    server.close()

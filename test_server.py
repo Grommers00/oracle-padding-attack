@@ -13,19 +13,20 @@ import _thread
 def btnUnpad(padded_data, block_size, style):
     pdata_len = len(padded_data)
     if pdata_len % block_size:
-        raise ValueError('Input data is not padded')
+        raise ValueError
     if style in ('btn710'):
         padding_len = bord(padded_data[-1]) + 1
         if padding_len<1 or padding_len>min(block_size, pdata_len):
-            raise ValueError('Padding is incorrect.')
+            raise ValueError
         padding = bytearray()
         for x in range(padding_len):
             padding += bchr(x)
         if padding_len>1 and padded_data[-padding_len:]!=padding:
-            raise ValueError('BTN 710 padding is incorrect.')
+            raise ValueError
     else:
-        raise ValueError('Unknown padding style')
-    return padded_data[:-padding_len]
+        raise ValueError
+    print (b'Unpadded Message: ' + padded_data[:-padding_len])
+    return 1
 
 
 """The first argument AF_INET is the ad
@@ -71,8 +72,6 @@ cipher = AES.new(key, AES.MODE_CTR, counter=ctr)
 
 
 def clientthread(conn, addr):
-    output = 'Thank you for connecting'
-    conn.sendall(output.encode('utf-8'))
     # sends a message to the client whose user object is conn
 
     while True:
@@ -80,24 +79,18 @@ def clientthread(conn, addr):
             ciphertext = conn.recv(2048)
             if ciphertext:
                 try:
-                    message = btnUnpad(cipher.decrypt(ciphertext), 12, "btn710")
-                    message_to_send = message.decode('utf-8')
-                except ValueError as error:
-                    message_to_send = ' '.join(error.args)
+                    message_to_send = bchr(btnUnpad(cipher.decrypt(ciphertext), 16, 'btn710'))
                 except: 
-                    message_to_send = "Other Error, Danger Danger!"                    
+                    message_to_send = bchr(0)                    
                 finally:
                     print(addr[0], message_to_send)
-                    broadcast(message_to_send.encode('utf-8'), conn)
-
+                    broadcast(message_to_send, conn)
             else:
                 """message may have no content if the connection
                 is broken, in this case we remove the connection"""
                 remove(conn)
-
         except:
             continue
-
 
 """Using the below function, we broadcast the message to all
 clients who's object is not the same as the one sending
