@@ -7,8 +7,6 @@ from Crypto.Util import Counter
 from Crypto.Util.Padding import pad
 from Crypto.Util.py3compat import bchr, bord
 
-
-
 def btnPad(data_to_pad, block_size, style):
 	padding_len = block_size-len(data_to_pad)%block_size
 	padding = bytearray()
@@ -19,7 +17,6 @@ def btnPad(data_to_pad, block_size, style):
 		raise ValueError("Unknown padding style")
 	return data_to_pad + padding
 
-
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
 if len(sys.argv) != 3: 
 	print ("Correct usage: script, IP address, port number")
@@ -27,12 +24,9 @@ if len(sys.argv) != 3:
 IP_address = str(sys.argv[1]) 
 Port = int(sys.argv[2]) 
 server.connect((IP_address, Port)) 
-nonce = b'abcd'
-ctr = Counter.new(64, prefix=nonce, suffix=b'ABCD', little_endian=True, initial_value=10)
 key = b'1234567891234567'
-# key = b'abcdefghijklmnop'
-cipher = AES.new(key, AES.MODE_CTR, counter=ctr)
-# 0, 1, 2, 3, 4, (n-1)
+iv = b'0123456789012345'
+cipher = AES.new(key, AES.MODE_CBC, iv=iv)
 while True: 
 
 	# maintains a list of possible input streams 
@@ -51,14 +45,15 @@ while True:
 	for socks in read_sockets: 
 		if socks == server: 
 			message = socks.recv(2048) 
+			msg = int.from_bytes(message, byteorder='big')
+			print(msg)
 			print(message)
 		else: 
 			message = sys.stdin.readline() 
 			plaintext = bytes(message, 'utf-8')
-			ciphertext = cipher.encrypt(btnPad(plaintext,16,'btn710'))
+			ciphertext = cipher.encrypt(btnPad(plaintext,AES.block_size,'btn710'))
 			server.sendall(ciphertext) 
 			sys.stdout.write("<You>") 
 			sys.stdout.write(message) 
 			sys.stdout.flush() 
 server.close() 
-
