@@ -3,8 +3,7 @@ from Crypto.Util.py3compat import bchr, bord
 def positionalByteForgery(forgery, count, position):
     info = [forgery[i] for i in range(0, len(forgery))]
     info[position] = 0 ^ count
-    forgery = bytes(info)
-    return forgery
+    return bytes(info)
 
 def elementForgery(forgery, count):
     info = [forgery[i] for i in range(0, len(forgery))]

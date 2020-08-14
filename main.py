@@ -17,10 +17,11 @@ if __name__ =='__main__':
 
     # Finding last byte correct padding
     correctPadding = False
-    count = 0 #I
+    count = 0
     while(not correctPadding):
         try: 
             decrypt(forgery + lastBlock)
+            print(b'Correct padding forgery: ' + forgery)
             correctPadding = True
         except ValueError:
             forgery = positionalByteForgery(forgery, count, 15)
@@ -36,6 +37,7 @@ if __name__ =='__main__':
             count += 1
         except ValueError:
             correctPadding = False
+    print('Amount of padding ' + str(17 - count))
 
     # Save last correct byte into intermediate value
     correctPaddingLength = 17 - count
@@ -47,6 +49,7 @@ if __name__ =='__main__':
     value = 0
     while(position >= 0):
         forgery = sequenceXor(forgery,intermediateValue, value)
+        print(b'Setting forgery: ' + forgery)
         correctPadding = False
         forgeryCounter = 0
         while (not correctPadding):
@@ -60,12 +63,14 @@ if __name__ =='__main__':
                 forgeryCounter += 1
         position -= 1
         value += 1
-
+    print('Completed Intermediate Value: ')
+    print(intermediateValue)
+    
     # Crack plaintext by xoring intermediate value and IV
     seperateIV = list(iv)
     crackedPlainText = []
     for i in range(16):
         crackedPlainText.append( bchr(seperateIV[i] ^ int.from_bytes(bytes(intermediateValue[i], 'utf-8'),"big")))
     crackedPlainText = b''.join(crackedPlainText)
-    crackedPlainText = btnUnpad(crackedPlainText, 16, 'btn710')[1]
+    crackedPlainText = btnUnpad(crackedPlainText, 16, 'btn710')
     print(crackedPlainText)

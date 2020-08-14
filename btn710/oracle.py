@@ -5,14 +5,14 @@ key = b'1234567891234567'
 iv = b'0123456789012345'
 
 def btnPad(data_to_pad, block_size, style):
-	padding_len = block_size-len(data_to_pad)%block_size
-	padding = bytearray()
-	if style == 'btn710':
-		for x in range(padding_len):
-			padding += bchr(x)
-	else:
-		raise ValueError('Unknown padding style')
-	return data_to_pad + padding
+    padding_len = block_size-len(data_to_pad)%block_size
+    padding = bytearray()
+    if style == 'btn710':
+        for x in range(padding_len):
+            padding += bchr(x)
+    else:
+        raise ValueError('Unknown padding style')
+    return data_to_pad + padding
 
 def btnUnpad(padded_data, block_size, style):
     pdata_len = len(padded_data)
@@ -28,8 +28,8 @@ def btnUnpad(padded_data, block_size, style):
         if padding_len>1 and padded_data[-padding_len:]!=padding:
             raise ValueError
     else:
-        raise ValueError
-    return 1, padded_data[:-padding_len]
+        raise ValueError  
+    return padded_data[:-padding_len]
 
 def encrypt(plaintext):
     cipher = AES.new(key, AES.MODE_CBC, iv=iv)
@@ -37,5 +37,4 @@ def encrypt(plaintext):
 
 def decrypt(cipherText):
     cipher = AES.new(key, AES.MODE_CBC, iv=iv)
-    return btnUnpad(cipher.decrypt(cipherText), AES.block_size, 'btn710')[1]
-  
+    return btnUnpad(cipher.decrypt(cipherText)[-16:], AES.block_size, 'btn710')
