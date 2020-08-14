@@ -3,8 +3,6 @@ from Crypto.Util.py3compat import bchr, bord
 
 key = b'1234567891234567'
 iv = b'0123456789012345'
-#key = b'asdfklmlgdfgdfgf'
-#iv = b'adsfyujgnfhddben'
 
 def btnPad(data_to_pad, block_size, style):
 	padding_len = block_size-len(data_to_pad)%block_size

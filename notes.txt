@@ -1,9 +1,0 @@
-Remove Welcome Message from server
-Change Padding error messages to 0s and 1s
-
-
-1. take rk = ak ⊕ (b − j + 2) for k = j, . . . , b
-2. pick r1, . . . , rj−1 at random and take i = 0
-3. take r = r1 . . . rj−2(rj−1 ⊕ i)rj . . . rb
-4. if O(r|y) = 0 then increment i and go back to the previous step
-5. output rj−1 ⊕ i ⊕ (b − j + 2)
