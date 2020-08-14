@@ -35,7 +35,7 @@ def btnUnpad(padded_data, block_size, style):
 
 def encrypt(plaintext):
     cipher = AES.new(key, AES.MODE_CBC, iv=iv)
-    return cipher.encrypt(btnPad(plaintext, AES.block_size, 'btn710'))
+    return iv + cipher.encrypt(btnPad(plaintext, AES.block_size, 'btn710'))
 
 def decrypt(cipherText):
     cipher = AES.new(key, AES.MODE_CBC, iv=iv)
