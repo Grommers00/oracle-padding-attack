@@ -22,7 +22,7 @@ from Crypto.Cipher import AES
 from Crypto.Util.py3compat import bchr, bord
 
 if __name__ =='__main__':
-    plainText = b'HelloWorld!aaaa'
+    plainText = b'WeAreDone!'
     #Normal server-client messages
     cipherText = encrypt(plainText)
     print(b'Cipher Text: ' + cipherText)
@@ -91,8 +91,13 @@ if __name__ =='__main__':
     #3 and #4 has to be done in its in own loop 
     #5 replace their step with ours based on our padding scheme
     #lastly XOR the a with the cipher text to retrieve the plain text
-    print(intermediateValue) 
-    intermediateValue = ''.join(intermediateValue)
-    intermediateValue = bytes(intermediateValue,'utf-8')
-    print(iv)
-    print(intermediateValue)
+    seperateIV = list(iv)
+    crackedPlainText = []
+    for i in range(16):
+        #print(seperateIV[i])
+        #print(int.from_bytes(bytes(intermediateValue[i], 'utf-8'),"big"))
+        crackedPlainText.append( bchr(seperateIV[i] ^ int.from_bytes(bytes(intermediateValue[i], 'utf-8'),"big")))
+    crackedPlainText = b''.join(crackedPlainText)
+    crackedPlainText = btnUnpad(crackedPlainText, 16, 'btn710')[1]
+    #crackedPlainText = bytes(crackedPlainText,'utf-8')
+    print(crackedPlainText)
